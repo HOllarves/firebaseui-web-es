@@ -3,6 +3,7 @@
   "version": "3.2.0",
   "description": "Javascript library for customizable UI on top of Firebase SDK",
   "files": [
+    "dist/npm__es.js",
     "dist/firebaseui.js",
     "dist/firebaseui.css",
     "dist/npm.js",
@@ -29,7 +30,7 @@
   "author": "Google",
   "repository": {
     "type": "git",
-    "url": "https://github.com/firebase/firebaseui-web.git"
+    "url": "https://github.com/franvera/firebaseui-web.git"
   },
   "license": "Apache-2.0",
   "devDependencies": {
