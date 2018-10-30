@@ -91,6 +91,8 @@ firebaseui.auth.AuthUI = function(auth, opt_appId) {
   this.auth_ = auth;
   /** @private {?string} The original Auth language code. */
   this.originalAuthLanguageCode_ = null;
+  /** @private {boolean} Whether language code requires reverting. */
+  this.languageCodePendingRevert_ = false;
   // Log FirebaseUI on external Auth instance.
   firebaseui.auth.AuthUI.logFirebaseUI_(this.auth_);
   var tempApp = firebase.initializeApp({
@@ -441,15 +443,14 @@ firebaseui.auth.AuthUI.prototype.start = function(element, config) {
   // Sync the language code of Auth instance with widget.
   this.auth_.languageCode = unicodeLocale;
   this.tempAuth_.languageCode = unicodeLocale;
+  // At end of flow or on reset, revert is needed.
+  this.languageCodePendingRevert_ = true;
 
   // There is a problem when config in second call modifies accountchooser.com
   // related config. eg. acUiConfig
   // These changes will be ignored as only the first accountchooser.com related
   // config will be applied.
   this.setConfig(config);
-  // Removes pending status of previous redirect operations including redirect
-  // back from accountchooser.com and federated sign in.
-  firebaseui.auth.storage.removePendingRedirectStatus(this.getAppId());
   // Checks if there is pending internal Auth signOut promise. If yes, wait
   // until it resolved and then initElement.
   var doc = goog.global.document;
@@ -522,6 +523,11 @@ firebaseui.auth.AuthUI.prototype.initElement_ = function(element) {
   this.initPageChangeListener_(container);
   // Document already loaded, render on demand.
   firebaseui.auth.widget.dispatcher.dispatchOperation(this, element);
+  // Removes pending status of previous redirect operations including redirect
+  // back from accountchooser.com and federated sign in.
+  // Remove status after dispatchOperation completes as that operation depends
+  // on this information.
+  firebaseui.auth.storage.removePendingRedirectStatus(this.getAppId());
 };
 
 
@@ -653,6 +659,23 @@ firebaseui.auth.AuthUI.prototype.getAuthUiGetter = function() {
 };
 
 
+/**
+ * Reverts the external Auth instance language code to original setting.
+ * This should be called right before the widget operation completes.
+ * However, it should be called before the developer callbacks, in case the
+ * developer tries to set the language within the callback.
+ */
+firebaseui.auth.AuthUI.prototype.revertLanguageCode = function() {
+  // Change back the languageCode of external Auth instance if revert is
+  // required.
+  if (typeof this.auth_.languageCode !== 'undefined' &&
+      this.languageCodePendingRevert_) {
+    this.languageCodePendingRevert_ = false;
+    this.auth_.languageCode = this.originalAuthLanguageCode_;
+  }
+};
+
+
 /** Reset rendered widget and removes it from display. */
 firebaseui.auth.AuthUI.prototype.reset = function() {
   // Check if instance is already destroyed.
@@ -666,10 +689,7 @@ firebaseui.auth.AuthUI.prototype.reset = function() {
   if (this.widgetEventDispatcher_) {
     this.widgetEventDispatcher_.unregister();
   }
-  // Change back the languageCode of external Auth instance.
-  if (typeof this.auth_.languageCode !== 'undefined') {
-    this.auth_.languageCode = this.originalAuthLanguageCode_;
-  }
+  this.revertLanguageCode();
   // Removes pending status of previous redirect operations including redirect
   // back from accountchooser.com and federated sign in.
   firebaseui.auth.storage.removePendingRedirectStatus(this.getAppId());

@@ -38,8 +38,12 @@ var IJ_DATA_ = {
   'twitterLogo': '../image/twitter.svg',
   'passwordLogo': '../image/mail.svg',
   'phoneLogo': '../image/phone.svg',
-  'tosUrl': 'tos',
-  'privacyPolicyUrl': 'privacy_policy'
+  'tosCallback': function() {
+    window.location.assign('/tos');
+  },
+  'privacyPolicyCallback': function() {
+    window.location.assign('/privacyPolicy');
+  }
 };
 
 
@@ -311,6 +315,14 @@ function testBusyIndicator() {
   var root = goog.dom.getElement('busy-indicator');
   var busy = goog.soy.renderAsElement(
       firebaseui.auth.soy2.element.busyIndicator, null);
+  root.appendChild(busy);
+}
+
+
+function testBusyIndicator_spinner() {
+  var root = goog.dom.getElement('busy-indicator-spinner');
+  var busy = goog.soy.renderAsElement(
+      firebaseui.auth.soy2.element.busyIndicator, {useSpinner: true});
   root.appendChild(busy);
 }
 

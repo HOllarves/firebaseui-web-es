@@ -37,13 +37,18 @@ SDK supports them in a way that is compatible with FirebaseUI.
 7. [Developer Setup](#developer-setup)
 8. [Cordova Setup](#cordova-setup)
 9. [React DOM Setup](#react-dom-setup)
-10. [Known issues](#known-issues)
-11. [Release Notes](#release-notes)
+10. [Angular Setup](#angular-setup)
+11. [Known issues](#known-issues)
+12. [Release Notes](#release-notes)
 
 ## Demo
 
 Accessible here:
 [https://fir-ui-demo-84a6c.firebaseapp.com](https://fir-ui-demo-84a6c.firebaseapp.com).
+
+<p align="center">
+  <img src="demo/screenshot.png" width="300" title="Screenshot">
+</p>
 
 ## Installation
 
@@ -53,8 +58,8 @@ You just need to include the following script and CSS file in the `<head>` tag
 of your page, below the initialization snippet from the Firebase Console:
 
 ```html
-<script src="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.js"></script>
-<link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.css" />
+<script src="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.js"></script>
+<link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.css" />
 ```
 
 #### Localized Widget
@@ -63,17 +68,17 @@ Localized versions of the widget are available through the CDN. To use a localiz
 localized JS library instead of the default library:
 
 ```html
-<script src="https://www.gstatic.com/firebasejs/ui/3.2.0/firebase-ui-auth__{LANGUAGE_CODE}.js"></script>
-<link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/3.2.0/firebase-ui-auth.css" />
+<script src="https://www.gstatic.com/firebasejs/ui/3.4.1/firebase-ui-auth__{LANGUAGE_CODE}.js"></script>
+<link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/3.4.1/firebase-ui-auth.css" />
 ```
 
 where `{LANGUAGE_CODE}` is replaced by the code of the language you want. For example, the French
 version of the library is available at
-`https://www.gstatic.com/firebasejs/ui/3.2.0/firebase-ui-auth__fr.js`. The list of available
+`https://www.gstatic.com/firebasejs/ui/3.4.1/firebase-ui-auth__fr.js`. The list of available
 languages and their respective language codes can be found at [LANGUAGES.md](LANGUAGES.md).
 
 Right-to-left languages also require the right-to-left version of the stylesheet, available at
-`https://www.gstatic.com/firebasejs/ui/3.2.0/firebase-ui-auth-rtl.css`, instead of the default
+`https://www.gstatic.com/firebasejs/ui/3.4.1/firebase-ui-auth-rtl.css`, instead of the default
 stylesheet. The supported right-to-left languages are Arabic (ar), Farsi (fa), and Hebrew (iw).
 
 ### Option 2: npm Module
@@ -176,8 +181,8 @@ for a more in-depth example, showcasing a Single Page Application mode.
        * TODO(DEVELOPER): Paste the initialization snippet from:
        * Firebase Console > Overview > Add Firebase to your web app. *
        ***************************************************************************************** -->
-    <script src="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.js"></script>
-    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.css" />
+    <script src="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.css" />
     <script type="text/javascript">
       // FirebaseUI config.
       var uiConfig = {
@@ -192,10 +197,14 @@ for a more in-depth example, showcasing a Single Page Application mode.
           firebase.auth.PhoneAuthProvider.PROVIDER_ID,
           firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID
         ],
-        // Terms of service url.
+        // tosUrl and privacyPolicyUrl accept either url string or a callback
+        // function.
+        // Terms of service url/callback.
         tosUrl: '<your-tos-url>',
-        // Privacy policy url.
-        privacyPolicyUrl: '<your-privacy-policy-url>'
+        // Privacy policy url/callback.
+        privacyPolicyUrl: function() {
+          window.location.assign('<your-privacy-policy-url>');
+        }
       };
 
       // Initialize the FirebaseUI Widget using Firebase.
@@ -217,8 +226,8 @@ for a more in-depth example, showcasing a Single Page Application mode.
 
 When redirecting back from accountchooser.com or Identity Providers like Google
 and Facebook, `start()` method needs to be called to finish the sign-in flow.
-If it requires a user interaction to start the initial sign-in process, you need to 
-check if there is a pending redirect operation going on on page load to check whether `start()` 
+If it requires a user interaction to start the initial sign-in process, you need to
+check if there is a pending redirect operation going on on page load to check whether `start()`
 needs to be called.
 
 To check if there is a pending redirect operation to complete a sign-in attempt,
@@ -399,19 +408,25 @@ FirebaseUI supports the following configuration parameters.
 <tr>
 <td>tosUrl</td>
 <td>Yes</td>
-<td>The URL of the Terms of Service page.</td>
+<td>
+  The URL of the Terms of Service page or a callback function to be invoked
+  when Terms of Service link is clicked.
+</td>
 </tr>
 <tr>
 <td>privacyPolicyUrl</td>
 <td>Yes</td>
-<td>The URL of the privacy policy page.</td>
+<td>
+  The URL of the Privacy Policy page or a callback function to be invoked
+  when Privacy Policy link is clicked.
+</td>
 </tr>
 </tbody>
 </table>
 
 ### Credential Helper
 
-The role of a credential helper is to help your users sign into you website.
+The role of a credential helper is to help your users sign into your website.
 When one is enabled, your users will be prompted with email addresses and
 usernames they have saved from your app or other applications.
 FirebaseUI supports the following credential helpers:
@@ -742,8 +757,8 @@ FirebaseUI is displayed.
        * TODO(DEVELOPER): Paste the initialization snippet from:
        * Firebase Console > Overview > Add Firebase to your web app. *
        ***************************************************************************************** -->
-    <script src="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.js"></script>
-    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.2.0/firebaseui.css" />
+    <script src="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://cdn.firebase.com/libs/firebaseui/3.4.1/firebaseui.css" />
     <script type="text/javascript">
       // FirebaseUI config.
       var uiConfig = {
@@ -802,10 +817,14 @@ FirebaseUI is displayed.
           },
           firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID
         ],
-        // Terms of service url.
+        // tosUrl and privacyPolicyUrl accept either url string or a callback
+        // function.
+        // Terms of service url/callback.
         tosUrl: '<your-tos-url>',
-        // Privacy policy url.
-        privacyPolicyUrl: '<your-privacy-policy-url>'
+        // Privacy policy url/callback.
+        privacyPolicyUrl: function() {
+          window.location.assign('<your-privacy-policy-url>');
+        }
       };
 
       var ui = new firebaseui.auth.AuthUI(firebase.auth());
@@ -1001,7 +1020,7 @@ To set up a development environment to build FirebaseUI from source, you must
 have the following installed:
 - Node.js (>= 6.0.0)
 - npm (should be included with Node.js)
-- Java Runtime Environment
+- Java SE Runtime Environment 8
 
 In order to run the demo and tests, you must also have:
 - Python (2.7)
@@ -1153,7 +1172,11 @@ appropriate exceptions for FirebaseUI resources (`style-src`, `media-src`,
 
 ## React DOM Setup
 
-In React DOM applications use the [FirebaseUI Web React Wrapper](https://github.com/firebase/firebaseui-web-react).
+In React DOM applications you can use the [FirebaseUI Web React Wrapper](https://github.com/firebase/firebaseui-web-react).
+
+## Angular Setup
+
+In Angular applications you can use this [FirebaseUI Web Angular Wrapper](https://github.com/RaphaelJenni/firebaseui-angular) from the community.
 
 ## Known issues
 

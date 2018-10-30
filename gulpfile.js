@@ -171,8 +171,8 @@ function repeatTaskForAllLocales(taskName, dependencies, operation) {
     const localeTaskName = replaceTokens(taskName);
     const localeDependencies = dependencies.map(replaceTokens);
     gulp.task(localeTaskName, gulp.series(
-        gulp.parallel(...localeDependencies),
-        () => operation(locale),
+        gulp.parallel.apply(null, localeDependencies),
+        () => operation(locale)
     ));
     return localeTaskName;
   });
@@ -256,7 +256,7 @@ gulp.task('build-externs',
 repeatTaskForAllLocales(
     'build-firebaseui-js-$',
     ['build-externs', 'build-ts', 'build-soy'],
-    buildFirebaseUiJs,
+    buildFirebaseUiJs
 );
 
 // Bundles the FirebaseUI JS with its dependencies as a NPM module. This builds
@@ -274,19 +274,19 @@ const buildJsTasks = repeatTaskForAllLocales(
 // Builds the final JS file for the default language.
 gulp.task('build-js', gulp.series(
     'build-js-' + DEFAULT_LOCALE,
-    () => makeDefaultFile('firebaseui'),
+    () => makeDefaultFile('firebaseui')
 ));
 
 // Builds the final JS file for all supported languages.
 gulp.task('build-all-js', gulp.series(
-    gulp.parallel(...buildJsTasks),
-    () => makeDefaultFile('firebaseui'),
+    gulp.parallel.apply(null, buildJsTasks),
+    () => makeDefaultFile('firebaseui')
 ));
 
 // Builds the NPM module for the default language.
 gulp.task('build-npm', gulp.series(
     'build-npm-' + DEFAULT_LOCALE,
-    () => makeDefaultFile('npm'),
+    () => makeDefaultFile('npm')
 ));
 
 /**
@@ -335,18 +335,14 @@ gulp.task('clean', () => fse.remove(TMP_DIR));
 
 // Executes the basic tasks for the default language.
 gulp.task('default', gulp.series(
-    gulp.parallel(
-        'build-externs', 'build-ts', 'build-js',
-        'build-npm', 'build-css', 'build-css-rtl',
-    ),
-    'clean',
+    'build-externs', 'build-ts', 'build-js',
+    'build-npm', 'build-css', 'build-css-rtl',
+    'clean'
 ));
 
 // Builds everything (JS for all languages, both LTR and RTL CSS).
 gulp.task('build-all', gulp.series(
-    gulp.parallel(
-        'build-externs', 'build-ts', 'build-all-js',
-        'build-npm', 'build-css', 'build-css-rtl',
-    ),
-    'clean',
+    'build-externs', 'build-ts', 'build-all-js',
+    'build-npm', 'build-css', 'build-css-rtl',
+    'clean'
 ));

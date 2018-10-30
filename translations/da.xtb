@@ -79,6 +79,7 @@
 <translation id="2541179214468543429">Du har indtastet en forkert adgangskode for mange gange. Prøv igen om et par minutter.</translation>
 <translation id="2561560038714758184">Sikkerhed</translation>
 <translation id="2561835578785502516">Din anmodning om at nulstille din adgangskode er udløbet, eller linket er allerede brugt</translation>
+<translation id="2581514546525533462">Den angivne landekode understøttes ikke.</translation>
 <translation id="2610891451939662786">Twitter</translation>
 <translation id="2612036261782356367">Cambodja</translation>
 <translation id="2616650714309312732">Portugal</translation>
@@ -211,6 +212,7 @@
 <translation id="5407010562344541906">Telefonnummer</translation>
 <translation id="5409861738809250803">Du har allerede en konto</translation>
 <translation id="5410341463946781720">Thailand</translation>
+<translation id="5443669846203963095">Privatlivspolitik</translation>
 <translation id="5444635161362535036">Liechtenstein</translation>
 <translation id="5483706910421209104">Rediger navn</translation>
 <translation id="5524360735013196510">Holland</translation>
@@ -228,7 +230,7 @@
 <translation id="5611074838440670731">Dette telefonnummer er blevet brugt for mange gange</translation>
 <translation id="5630396263271753991">Eritrea</translation>
 <translation id="5636713964613741614">Mauritius</translation>
-<translation id="5642254620426025006">Der opstod en fejl. Prøv igen.</translation>
+<translation id="5642254620426025006">Noget gik galt. Prøv igen.</translation>
 <translation id="5649486931917149784">Adgangskode</translation>
 <translation id="5664080586064341046">St. Kitts</translation>
 <translation id="5699028034244995851">Angiv din mailadresse for at fortsætte</translation>

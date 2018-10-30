@@ -37,8 +37,12 @@ var IJ_DATA_ = {
   'passwordLogo': '../image/mail.svg',
   'phoneLogo': '../image/phone.svg',
   'anonymousLogo': '../image/anonymous.png',
-  'tosUrl': 'tos',
-  'privacyPolicyUrl': 'privacy_policy'
+  'tosCallback': function() {
+    window.location.assign('/tos');
+  },
+  'privacyPolicyCallback': function() {
+    window.location.assign('/privacyPolicy');
+  }
 };
 
 
@@ -363,11 +367,26 @@ function testProviderSignIn() {
 }
 
 
+function testProviderSignIn_busy() {
+  var root = goog.dom.getElement('provider-sign-in-busy');
+  goog.soy.renderElement(
+      root, firebaseui.auth.soy2.page.providerSignIn, {
+        'providerIds':
+            ['password', 'phone', 'google.com', 'github.com', 'facebook.com',
+             'twitter.com', 'anonymous']
+      },
+      IJ_DATA_);
+  var busy = goog.soy.renderAsElement(
+      firebaseui.auth.soy2.element.busyIndicator, {useSpinner: true});
+  root.children[0].appendChild(busy);
+}
+
+
 function testPhoneSignInStartInvisibleRecaptcha() {
   var root = goog.dom.getElement('phone-sign-in-start-invisible-recaptcha');
   goog.soy.renderElement(
       root, firebaseui.auth.soy2.page.phoneSignInStart,
-      {enableVisibleRecaptcha: false}, IJ_DATA_);
+      {enableVisibleRecaptcha: false, displayCancelButton: true}, IJ_DATA_);
 }
 
 
@@ -375,7 +394,7 @@ function testPhoneSignInStartVisibleRecaptcha() {
   var root = goog.dom.getElement('phone-sign-in-start-visible-recaptcha');
   goog.soy.renderElement(
       root, firebaseui.auth.soy2.page.phoneSignInStart,
-      {enableVisibleRecaptcha: true}, IJ_DATA_);
+      {enableVisibleRecaptcha: true, displayCancelButton: true}, IJ_DATA_);
   loadRecaptcha(root);
 }
 
@@ -386,8 +405,17 @@ function testPhoneSignInStart_fullMessage() {
       root, firebaseui.auth.soy2.page.phoneSignInStart,
       {
         enableVisibleRecaptcha: false,
+        displayCancelButton: true,
         displayFullTosPpMessage: true
       }, IJ_DATA_);
+}
+
+
+function testPhoneSignInStart_noCancelButton() {
+  var root = goog.dom.getElement('phone-sign-in-start-no-cancel-button');
+  goog.soy.renderElement(
+      root, firebaseui.auth.soy2.page.phoneSignInStart,
+      {enableVisibleRecaptcha: false, displayCancelButton: false}, IJ_DATA_);
 }
 
 
