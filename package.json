@@ -5,13 +5,14 @@
   "files": [
     "dist/firebaseui__es.js",
     "dist/firebaseui.css",
+    "dist/npm__es.js",
     "dist/index.d.ts",
     "dist/externs",
     "LICENSE",
     "README.md",
     "package.json"
   ],
-  "main": "./dist/firebaseui__es.js",
+  "main": "./dist/npm__es.js",
   "types": "./dist/index.d.ts",
   "style": "dist/firebaseui.css",
   "scripts": {
