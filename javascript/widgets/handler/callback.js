@@ -65,9 +65,8 @@ firebaseui.auth.widget.handler.handleCallback =
         error['credential']) {
       // Save pending email credential.
       firebaseui.auth.storage.setPendingEmailCredential(
-          /** @type {!firebaseui.auth.PendingEmailCredential} */ (
-              firebaseui.auth.PendingEmailCredential.fromPlainObject(
-                  /** @type {?Object} */ (error))),
+          new firebaseui.auth.PendingEmailCredential(
+              error['email'], error['credential']),
           app.getAppId());
       firebaseui.auth.widget.handler.handleCallbackLinking_(
           app, component, error['email']);
@@ -134,7 +133,7 @@ firebaseui.auth.widget.handler.handleCallback =
 firebaseui.auth.widget.handler.handleCallbackResult_ =
     function(app, component, result) {
   if (result['user']) {
-    var authResult = /** @type {!firebaseui.auth.AuthResult} */ ({
+    var authResult = /** @type {!firebaseui.auth.widget.Config.AuthResult} */ ({
       'user': result['user'],
       'credential': result['credential'],
       'operationType': result['operationType'],
@@ -161,22 +160,23 @@ firebaseui.auth.widget.handler.handleCallbackResult_ =
     if (pendingCredential) {
       // Check if there is a pending auth credential. If so, complete the link
       // process and delete the pending credential.
-      app.registerPending(result['user'].linkAndRetrieveDataWithCredential(
-          pendingCredential)
+      app.registerPending(result['user'].linkWithCredential(pendingCredential)
           .then(function(userCredential) {
             // Linking successful, complete sign in, pass pending credentials
             // as the developer originally expected them in the sign in
             // attempt that triggered the link.
-            authResult = /** @type {!firebaseui.auth.AuthResult} */ ({
-              'user': userCredential['user'],
-              'credential': pendingCredential,
-              // Even though the operation type returned here is always 'link',
-              // we will sign in again on external Auth instance with this
-              // credential returning 'signIn' or 'link' in case of anonymous
-              // upgrade through finishSignInAndRetrieveDataWithAuthResult.
-              'operationType': userCredential['operationType'],
-              'additionalUserInfo': userCredential['additionalUserInfo']
-            });
+            authResult = (
+                /** @type {!firebaseui.auth.widget.Config.AuthResult} */ ({
+                  'user': userCredential['user'],
+                  'credential': pendingCredential,
+                  // Even though the operation type returned here is always
+                  // 'link', we will sign in again on external Auth instance
+                  // with this credential returning 'signIn' or 'link' in case
+                  // of anonymous upgrade through
+                  // finishSignInAndRetrieveDataWithAuthResult.
+                  'operationType': userCredential['operationType'],
+                  'additionalUserInfo': userCredential['additionalUserInfo']
+                }));
             firebaseui.auth.widget.handler.handleCallbackSuccess_(
                 app, component, authResult);
           },
@@ -210,9 +210,9 @@ firebaseui.auth.widget.handler.handleCallbackResult_ =
  *     configuration is used.
  * @param {!firebaseui.auth.ui.page.Base} component The current UI component if
  *     present.
- * @param {!firebaseui.auth.AuthResult} authResult The Auth result, which
- *     includes current user, credential to sign in on external Auth instance,
- *     additional user info and operation type.
+ * @param {!firebaseui.auth.widget.Config.AuthResult} authResult The Auth
+ *     result, which includes current user, credential to sign in on external
+ *     Auth instance, additional user info and operation type.
  * @private
  */
 firebaseui.auth.widget.handler.handleCallbackSuccess_ =
@@ -298,14 +298,26 @@ firebaseui.auth.widget.handler.handleCallbackLinking_ =
               email);
         } else {
           var federatedSignInMethod =
-              firebaseui.auth.idp.getFirstFederatedSignInMethod(signInMethods);
-          firebaseui.auth.widget.handler.handle(
-              firebaseui.auth.widget.HandlerName.FEDERATED_LINKING,
-              app,
-              container,
-              email,
-              federatedSignInMethod,
-              opt_infoBarMessage);
+              firebaseui.auth.idp.getFirstFederatedSignInMethod(
+                  signInMethods, app.getConfig().getProviders());
+          if (federatedSignInMethod) {
+            firebaseui.auth.widget.handler.handle(
+                firebaseui.auth.widget.HandlerName.FEDERATED_LINKING,
+                app,
+                container,
+                email,
+                federatedSignInMethod,
+                opt_infoBarMessage);
+          } else {
+            // No ability to link. Clear pending email credential.
+            firebaseui.auth.storage.removePendingEmailCredential(
+                app.getAppId());
+            firebaseui.auth.widget.handler.handle(
+                firebaseui.auth.widget.HandlerName.UNSUPPORTED_PROVIDER,
+                app,
+                container,
+                email);
+          }
         }
       }, function(error) {
         firebaseui.auth.widget.handler.handleCallbackFailure_(
@@ -319,7 +331,8 @@ firebaseui.auth.widget.handler.handleCallbackLinking_ =
  * @param {!firebaseui.auth.AuthUI} app The current FirebaseUI instance whose
  *     configuration is used.
  * @param {!firebaseui.auth.ui.page.Base} component The current UI component.
- * @param {!firebaseui.auth.AuthResult} authResult The Auth result object.
+ * @param {!firebaseui.auth.widget.Config.AuthResult} authResult The Auth
+ *     result object.
  * @private
  */
 firebaseui.auth.widget.handler.handleCallbackEmailMismatch_ =

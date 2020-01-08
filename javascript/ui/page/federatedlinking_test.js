@@ -53,7 +53,9 @@ function setUp() {
   document.body.appendChild(root);
   component = new firebaseui.auth.ui.page.FederatedLinking(
       'user@example.com',
-      'google.com',
+      {
+        providerId: 'google.com'
+      },
       goog.bind(
           firebaseui.auth.ui.element.FormTestHelper.prototype.onSubmit,
           formTestHelper),
@@ -102,7 +104,9 @@ function testFederatedLinking_pageEvents() {
   // Initialize component.
   component = new firebaseui.auth.ui.page.FederatedLinking(
       'user@example.com',
-      'google.com',
+      {
+        providerId: 'google.com'
+      },
       goog.bind(
           firebaseui.auth.ui.element.FormTestHelper.prototype.onSubmit,
           formTestHelper));

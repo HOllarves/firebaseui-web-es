@@ -20,7 +20,6 @@ goog.provide('firebaseui.auth.widget.handler.CallbackTest');
 goog.setTestOnly('firebaseui.auth.widget.handler.CallbackTest');
 
 goog.require('firebaseui.auth.AuthUIError');
-goog.require('firebaseui.auth.CredentialHelper');
 goog.require('firebaseui.auth.PendingEmailCredential');
 goog.require('firebaseui.auth.idp');
 goog.require('firebaseui.auth.soy2.strings');
@@ -637,7 +636,7 @@ function testHandleCallback_redirectUser_pendingCredential_success() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'google.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -699,7 +698,7 @@ function testHandleCallback_signedInUser_pendingCredential_success_popup() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'google.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -768,7 +767,7 @@ function testHandleCallback_redirectUser_pendingCredential_signInCallback() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'google.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -849,7 +848,7 @@ function testHandleCallback_redirectUser_pendingCred_signInWithAuthResultCb() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'facebook.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [credToLink], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -936,7 +935,7 @@ function testHandleCallback_pendingCred_signInWithAuthResultCb_popup() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'facebook.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [credToLink], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -979,14 +978,14 @@ function testHandleCallback_pendingCred_signInWithAuthResultCb_popup() {
 function testHandleCallback_redirectUser_pendingCredential_emailMismatch() {
   // Test successful return from regular sign in operation.
   asyncTestCase.waitForSignals(1);
-  var pendingCred  = {
+  var pendingCred  = createMockCredential({
     'providerId': 'google.com',
     'accessToken': 'ACCESS_TOKEN'
-  };
-  var cred  = {
+  });
+  var cred  = createMockCredential({
     'providerId': 'google.com',
     'accessToken': 'OTHER_ACCESS_TOKEN'
-  };
+  });
   // Pending email from a tentative federated sign-in.
   var pendingEmailCred =
       new firebaseui.auth.PendingEmailCredential('other@example.com',
@@ -1027,14 +1026,14 @@ function testHandleCallback_signedInUser_pendingCred_emailMismatch_popup() {
   // triggering mismatch.
   asyncTestCase.waitForSignals(1);
   app.updateConfig('signInFlow', 'popup');
-  var pendingCred  = {
+  var pendingCred  = createMockCredential({
     'providerId': 'google.com',
     'accessToken': 'ACCESS_TOKEN'
-  };
-  var cred  = {
+  });
+  var cred  = createMockCredential({
     'providerId': 'google.com',
     'accessToken': 'OTHER_ACCESS_TOKEN'
-  };
+  });
   // User should be signed in.
   testAuth.setUser({
     'email': federatedAccount.getEmail(),
@@ -1100,7 +1099,7 @@ function testHandleCallback_redirectUser_pendingCredential_error() {
   testAuth.process().then(function() {
     // Linking should be triggered with pending credential.
     // Simulate an error here.
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], null, internalError);
     return testAuth.process();
   }).then(function() {
@@ -1108,6 +1107,59 @@ function testHandleCallback_redirectUser_pendingCredential_error() {
     assertFalse(firebaseui.auth.storage.hasPendingEmailCredential(
         app.getAppId()));
     // Redirect to the provider's sign-in page.
+    assertProviderSignInPage();
+    // Show error in info bar.
+    assertInfoBarMessage(
+        firebaseui.auth.widget.handler.common.getErrorMessage(internalError));
+    asyncTestCase.signal();
+  });
+}
+
+
+function testHandleCallback_redirectUser_alwaysShowNascarScreenOnError() {
+  // Tests that the 'nascar' sign-in page won't be skipped when there is
+  // an error message. This is tested by simulating an error in linking
+  // after returning from a regular sign in operation with pending
+  // credentials.
+  asyncTestCase.waitForSignals(1);
+  app.setConfig({
+    'immediateFederatedRedirect': true,
+    'signInOptions': [firebase.auth.GoogleAuthProvider.PROVIDER_ID],
+    'signInFlow': firebaseui.auth.widget.Config.SignInFlow.REDIRECT
+  });
+  var cred = firebaseui.auth.idp.getAuthCredential({
+    'providerId': 'google.com',
+    'accessToken': 'ACCESS_TOKEN'
+  });
+  var pendingEmailCred = new firebaseui.auth.PendingEmailCredential(
+      federatedAccount.getEmail(), cred);
+  // Simulate previous linking required (pending credentials should be saved).
+  firebaseui.auth.storage.setPendingEmailCredential(
+      pendingEmailCred, app.getAppId());
+  // Callback rendered.
+  firebaseui.auth.widget.handler.handleCallback(app, container);
+  assertCallbackPage();
+  // User should be signed in at this point.
+  testAuth.setUser({
+    'email': federatedAccount.getEmail(),
+    'displayName': federatedAccount.getDisplayName()
+  });
+  // Attempting to get redirect result. Resolve with success.
+  testAuth.assertGetRedirectResult(
+      [],
+      {
+        'user': testAuth.currentUser,
+        'credential': null
+      });
+  testAuth.process().then(function() {
+    // Linking should be triggered with pending credential.
+    // Simulate an error here.
+    testAuth.currentUser.assertLinkWithCredential(
+        [cred], null, internalError);
+    return testAuth.process();
+  }).then(function() {
+    // Redirect to the provider's sign-in page. This should not skip the
+    // 'nascar' screen since there is an error message.
     assertProviderSignInPage();
     // Show error in info bar.
     assertInfoBarMessage(
@@ -1148,7 +1200,7 @@ function testHandleCallback_signedInUser_pendingCred_error_popup() {
   testAuth.process().then(function() {
     // Linking should be triggered with pending credential.
     // Simulate an error here.
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], null, internalError);
     return testAuth.process();
   }).then(function() {
@@ -1171,7 +1223,8 @@ function testHandleCallback_redirectUser_pendingCredential_err_emailAuthOnly() {
   // Test when single email auth provider is used.
   asyncTestCase.waitForSignals(1);
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   var cred  = firebaseui.auth.idp.getAuthCredential({
@@ -1201,7 +1254,7 @@ function testHandleCallback_redirectUser_pendingCredential_err_emailAuthOnly() {
   testAuth.process().then(function() {
     // Linking should be triggered with pending credential.
     // Simulate an error here.
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], null, internalError);
     return testAuth.process();
   }).then(function() {
@@ -1225,7 +1278,8 @@ function testHandleCallback_signedInUser_pendingCred_err_emailAuthOnly_popup() {
   asyncTestCase.waitForSignals(1);
   app.updateConfig('signInFlow', 'popup');
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   var cred  = firebaseui.auth.idp.getAuthCredential({
@@ -1254,7 +1308,7 @@ function testHandleCallback_signedInUser_pendingCred_err_emailAuthOnly_popup() {
   testAuth.process().then(function() {
     // Linking should be triggered with pending credential.
     // Simulate an error here.
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], null, internalError);
     return testAuth.process();
   }).then(function() {
@@ -1323,7 +1377,8 @@ function testHandleCallback_redirectError_noLinking_emailAuthOnly() {
   // Test when single email auth provider is used.
   asyncTestCase.waitForSignals(1);
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   // Callback rendered.
@@ -1351,7 +1406,8 @@ function testHandleCallback_signInError_noLinking_emailAuthOnly_popup() {
   asyncTestCase.waitForSignals(1);
   app.setConfig({
     'signInFlow': 'popup',
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   // Popup result: reject with a generic error.
@@ -1481,6 +1537,42 @@ function testHandleCallback_redirectError_anonymousLinkingRequired() {
     assertInfoBarMessage(
         firebaseui.auth.soy2.strings.errorAnonymousEmailBlockingSignIn()
           .toString());
+    asyncTestCase.signal();
+  });
+}
+
+
+function testHandleCallback_redirectError_unsupportedProvider() {
+  // Test return from regular sign in operation with a linking error to a SAML
+  // account, but the SAML provider is not enabled in config. Unsupported
+  // provider page should be shown.
+  asyncTestCase.waitForSignals(1);
+  var cred  = createMockCredential({
+    'providerId': 'saml.provider',
+    'pendingToken': 'PENDING_TOKEN'
+  });
+
+  // Callback rendered.
+  firebaseui.auth.widget.handler.handleCallback(app, container);
+  assertCallbackPage();
+  // Attempting to get redirect result. Reject with an error requiring linking.
+  // The error contains the email and the pending credential.
+  testAuth.assertGetRedirectResult(
+      [],
+      null,
+      {
+        'code': 'auth/account-exists-with-different-credential',
+        'email': passwordAccount.getEmail(),
+        'credential': cred
+      });
+  testAuth.assertFetchSignInMethodsForEmail(
+      [federatedAccount.getEmail()], ['saml.disabledProvider']);
+  testAuth.process().then(function() {
+    // The pending email credential should be cleared at this point.
+    assertFalse(firebaseui.auth.storage.hasPendingEmailCredential(
+        app.getAppId()));
+    // Unsupported provider page should be rendered.
+    assertUnsupportedProviderPage(passwordAccount.getEmail());
     asyncTestCase.signal();
   });
 }
@@ -1705,7 +1797,8 @@ function testHandleCallback_redirectError_linkingRequired_err_emailAuthOnly() {
   // Fetch Provider Email request fails in this case.
   // Test when single email auth provider is used.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   asyncTestCase.waitForSignals(1);
@@ -1749,7 +1842,8 @@ function testHandleCallback_signInErr_linkRequired_err_emailAuthOnly_popup() {
   // Fetch Provider Email request fails in this case.
   // Test when single email auth provider is used.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   asyncTestCase.waitForSignals(1);
@@ -1915,7 +2009,8 @@ function testHandleCallback_nullUser_emailAuthOnly_acEnabled() {
   // Test when no previous sign-in with redirect is detected and the sign-in
   // page is rendered (email auth provider only, accountchooser.com is enabled).
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   asyncTestCase.waitForSignals(1);
@@ -1958,7 +2053,8 @@ function testHandleCallback_nullUser_emailAuthOnly_acEnabled_newAcctSelect() {
   // page is rendered (email auth provider only, accountchooser.com is enabled).
   // Simulate new account selected.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID],
     'callbacks': {
       'accountChooserResult': accountChooserResultCallback,
@@ -2024,7 +2120,8 @@ function testHandleCallback_nullUser_emailAuthOnly_acEnabled_existingAccount() {
   // page is rendered (email auth provider only, accountchooser.com is enabled).
   // Simulate existing password account selected.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID],
     'callbacks': {
       'accountChooserResult': accountChooserResultCallback,
@@ -2085,7 +2182,8 @@ function testHandleCallback_nullUser_emailAuthOnly_acEnabled_addAccount() {
   // page is rendered (email auth provider only, accountchooser.com is enabled).
   // Simulate "Add Account" selected.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID],
     'callbacks': {
       'accountChooserResult': accountChooserResultCallback,
@@ -2137,7 +2235,7 @@ function testHandleCallback_nullUser_emailAuthOnly_acDisabled() {
   // page is rendered (email auth provider only, credential helpers are
   // disabled).
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.NONE,
+    'credentialHelper': firebaseui.auth.widget.Config.CredentialHelper.NONE,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID],
     'callbacks': {
       'accountChooserResult': accountChooserResultCallback,
@@ -2188,7 +2286,8 @@ function testHandleCallback_nullUser_emailAuthOnly_acUnavailable() {
   // page is rendered (email auth provider only, accountchooser.com is
   // unavailable).
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID],
     'callbacks': {
       'accountChooserResult': accountChooserResultCallback,
@@ -2355,7 +2454,7 @@ function testHandleCallback_operationNotSupported_passwordOnly_acDisabled() {
   // Set password only provider.
   // Test with accountchooser.com disabled.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.NONE,
+    'credentialHelper': firebaseui.auth.widget.Config.CredentialHelper.NONE,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   // Callback rendered.
@@ -2383,7 +2482,8 @@ function testHandleCallback_operationNotSupported_passwordOnly_acEnabled() {
   // Set password only provider.
   // Test with accountchooser.com enabled.
   app.setConfig({
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'signInOptions': [firebase.auth.EmailAuthProvider.PROVIDER_ID]
   });
   // Simulate empty response from accountchooser.com click.
@@ -2731,7 +2831,7 @@ function testHandleCallback_anonymousUpgrade_pendingCredential_success() {
   });
   var pendingEmailCred = new firebaseui.auth.PendingEmailCredential(
       federatedAccount.getEmail(), cred);
-  // Expected linkAndRetrieveDataWithCredential error.
+  // Expected linkWithCredential error.
   var expectedError = {
     'code': 'auth/credential-already-in-use',
     'credential': cred,
@@ -2776,7 +2876,7 @@ function testHandleCallback_anonymousUpgrade_pendingCredential_success() {
       'operationType': 'link',
       'additionalUserInfo': {'providerId': 'google.com', 'isNewUser': false}
     };
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [cred], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -2787,7 +2887,7 @@ function testHandleCallback_anonymousUpgrade_pendingCredential_success() {
   }).then(function() {
     // Linking existing credential to anonymous user should fail with expected
     // error.
-    externalAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    externalAuth.currentUser.assertLinkWithCredential(
         [cred],
         null,
         expectedError);
@@ -2829,7 +2929,7 @@ function testHandleCallback_anonUpgrade_pendingCred_signInWithAuthResultCb() {
   });
   var pendingEmailCred = new firebaseui.auth.PendingEmailCredential(
       federatedAccount.getEmail(), credToLink);
-  // Expected linkAndRetrieveDataWithCredential error.
+  // Expected linkWithCredential error.
   var expectedError = {
     'code': 'auth/credential-already-in-use',
     'credential': credToLink,
@@ -2878,7 +2978,7 @@ function testHandleCallback_anonUpgrade_pendingCred_signInWithAuthResultCb() {
     };
     // On successful google sign in, the saved facebook credential is linked
     // successful in internal Auth instance.
-    testAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    testAuth.currentUser.assertLinkWithCredential(
         [credToLink], userCredential);
     return testAuth.process();
     // Sign out from internal instance and then sign in with passed credential
@@ -2890,7 +2990,7 @@ function testHandleCallback_anonUpgrade_pendingCred_signInWithAuthResultCb() {
     // The anonymous upgrade flow on external currentUser will fail due to
     // merge conflict when the facebook credential is linked and returned back
     // to the developer.
-    externalAuth.currentUser.assertLinkAndRetrieveDataWithCredential(
+    externalAuth.currentUser.assertLinkWithCredential(
         [credToLink],
         null,
         expectedError);

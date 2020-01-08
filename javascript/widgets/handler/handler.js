@@ -25,7 +25,6 @@ goog.require('goog.asserts');
 goog.forwardDeclare('firebaseui.auth.AuthUI');
 
 
-
 /**
  * Handler names.
  * @enum {string}
@@ -41,6 +40,7 @@ firebaseui.auth.widget.HandlerName = {
   PHONE_SIGN_IN_START: 'phoneSignInStart',
   FEDERATED_LINKING: 'federatedLinking',
   FEDERATED_SIGN_IN: 'federatedSignIn',
+  FEDERATED_REDIRECT: 'federatedRedirect',
   SEND_EMAIL_LINK_FOR_SIGN_IN: 'sendEmailLinkForSignIn',
   EMAIL_LINK_CONFIRMATION: 'emailLinkConfirmation',
   EMAIL_LINK_NEW_DEVICE_LINKING: 'emailLinkNewDeviceLinking',
@@ -54,7 +54,9 @@ firebaseui.auth.widget.HandlerName = {
   EMAIL_VERIFICATION: 'emailVerification',
   PASSWORD_RESET: 'passwordReset',
   EMAIL_MISMATCH: 'emailMismatch',
-  PROVIDER_SIGN_IN: 'providerSignIn'
+  PROVIDER_SIGN_IN: 'providerSignIn',
+  PREFILLED_EMAIL_SIGN_IN: 'prefilledEmailSignIn',
+  UNSUPPORTED_PROVIDER: 'unsupportedProvider'
 };
 
 

@@ -26,159 +26,152 @@ var array = goog.require('goog.array');
 
 /**
  * Fake Auth API client class.
- * @param {!firebaseui.auth.testing.FakeAppClient} app The app instance
- *     associated with the fake Auth client.
- * @constructor
- * @extends {MockHelper}
  */
-var FakeAuthClient = function(app) {
-  this.user_ = {};
-  this['app'] = app;
-  this['currentUser'] = null;
-  var asyncMethods = {};
-  // Populate auth async methods.
-  for (var key in FakeAuthClient.AuthAsyncMethod) {
-    asyncMethods[key] = {
-      'context': this,
-      'name': FakeAuthClient.AuthAsyncMethod[key]
-    };
-  }
-  // Populate user async methods.
-  for (var key in FakeAuthClient.UserAsyncMethod) {
-    asyncMethods[key] = {
-      'context': this.user_,
-      'name': FakeAuthClient.UserAsyncMethod[key]
-    };
-  }
-  FakeAuthClient.base(this, 'constructor', asyncMethods);
-  this.authObservers_ = [];
-  this.idTokenObservers_ = [];
-  /** @private {!Array<string>} The list of frameworks logged. */
-  this.frameworks_ = [];
-  var self = this;
-  this['INTERNAL'] = {
-    logFramework: function(framework) {
-      self.frameworks_.push(framework);
-    }
-  };
-};
-goog.inherits(FakeAuthClient, MockHelper);
-
-
-/**
- * Asserts the expected list of frameworks IDs are logged.
- * @param {!Array<string>} expectedFrameworks The expected list of frameworks
- *     logged.
- */
-FakeAuthClient.prototype.assertFrameworksLogged = function(expectedFrameworks) {
-  assertArrayEquals(expectedFrameworks, this.frameworks_);
-};
-
-
-/**
- * Updates the user with selected properties.
- * @param {!Object} props The updated user properties, if null, user is
- *     nullified.
- */
-FakeAuthClient.prototype.setUser = function(props) {
-  if (props) {
-    // User is logged in.
-    for (var key in FakeAuthClient.UserProperty) {
-      var prop = FakeAuthClient.UserProperty[key];
-      this.user_[prop] = props[prop];
-    }
-    this['currentUser'] = this.user_;
-  } else {
-    // User is logged out.
+class FakeAuthClient extends MockHelper {
+  /**
+   * @param {!firebaseui.auth.testing.FakeAppClient} app The app instance
+   *     associated with the fake Auth client.
+   */
+  constructor(app) {
+    super();
+    this.user_ = {};
+    this['app'] = app;
     this['currentUser'] = null;
+    var asyncMethods = {};
+    // Populate auth async methods.
+    for (var key in FakeAuthClient.AuthAsyncMethod) {
+      asyncMethods[key] = {
+        'context': this,
+        'name': FakeAuthClient.AuthAsyncMethod[key]
+      };
+    }
+    // Populate user async methods.
+    for (var key in FakeAuthClient.UserAsyncMethod) {
+      asyncMethods[key] = {
+        'context': this.user_,
+        'name': FakeAuthClient.UserAsyncMethod[key]
+      };
+    }
+    // Pass async methods enum to base class.
+    this.asyncMethods = asyncMethods;
+    this.authObservers_ = [];
+    this.idTokenObservers_ = [];
+    /** @private {!Array<string>} The list of frameworks logged. */
+    this.frameworks_ = [];
+    var self = this;
+    this['INTERNAL'] = {
+      logFramework: function(framework) {
+        self.frameworks_.push(framework);
+      }
+    };
   }
-};
 
-
-/**
- * Triggers all registered auth state change listeners.
- */
-FakeAuthClient.prototype.runAuthChangeHandler =
-    function() {
-  for (var i = 0; i < this.authObservers_.length; i++) {
-    this.authObservers_[i](this['currentUser']);
+  /**
+   * Asserts the expected list of frameworks IDs are logged.
+   * @param {!Array<string>} expectedFrameworks The expected list of frameworks
+   *     logged.
+   */
+  assertFrameworksLogged(expectedFrameworks) {
+    assertArrayEquals(expectedFrameworks, this.frameworks_);
   }
-};
 
-
-/**
- * Adds an observer for auth state user changes.
- * @param {!Object|function(?Object)}
- *     nextOrObserver An observer object or a function triggered on change.
- * @param {function(!Object)=} opt_error Optional A function
- *     triggered on auth error.
- * @param {function()=} opt_completed Optional A function triggered when the
- *     observer is removed.
- * @return {!function()} The unsubscribe function for the observer.
- */
-FakeAuthClient.prototype.onAuthStateChanged = function(
-    nextOrObserver, opt_error, opt_completed) {
-  // Simplified version of the observer for testing purpose only.
-  var observer = (goog.isFunction(nextOrObserver) && nextOrObserver) ||
-      nextOrObserver['next'];
-  if (!observer) {
-    throw 'onAuthStateChanged must be called with an Observer or up to three ' +
-        'functions: next, error and completed.';
+  /**
+   * Updates the user with selected properties.
+   * @param {!Object} props The updated user properties, if null, user is
+   *     nullified.
+   */
+  setUser(props) {
+    if (props) {
+      // User is logged in.
+      for (var key in FakeAuthClient.UserProperty) {
+        var prop = FakeAuthClient.UserProperty[key];
+        this.user_[prop] = props[prop];
+      }
+      this['currentUser'] = this.user_;
+    } else {
+      // User is logged out.
+      this['currentUser'] = null;
+    }
   }
-  this.authObservers_.push(observer);
-  var self = this;
-  // This will allow the subscriber to remove the observer.
-  var unsubscribe = function() {
-    // Removes the observer.
-    array.removeAllIf(self.authObservers_, function(obs) {
-      return obs == observer;
-    });
-  };
-  return unsubscribe;
-};
 
-
-/**
- * Triggers all registered ID token change listeners.
- */
-FakeAuthClient.prototype.runIdTokenChangeHandler =
-    function() {
-  for (var i = 0; i < this.idTokenObservers_.length; i++) {
-    this.idTokenObservers_[i](this['currentUser']);
+  /**
+   * Triggers all registered auth state change listeners.
+   */
+  runAuthChangeHandler() {
+    for (var i = 0; i < this.authObservers_.length; i++) {
+      this.authObservers_[i](this['currentUser']);
+    }
   }
-};
 
-
-/**
- * Adds an observer for ID token state changes.
- * @param {!Object|function(?Object)}
- *     nextOrObserver An observer object or a function triggered on change.
- * @param {function(!Object)=} opt_error Optional A function
- *     triggered on auth error.
- * @param {function()=} opt_completed Optional A function triggered when the
- *     observer is removed.
- * @return {!function()} The unsubscribe function for the observer.
- */
-FakeAuthClient.prototype.onIdTokenChanged = function(
-    nextOrObserver, opt_error, opt_completed) {
-  // Simplified version of the observer for testing purpose only.
-  var observer = (goog.isFunction(nextOrObserver) && nextOrObserver) ||
-      nextOrObserver['next'];
-  if (!observer) {
-    throw 'onIdTokenChanged must be called with an Observer or up to three ' +
-        'functions: next, error and completed.';
+  /**
+   * Adds an observer for auth state user changes.
+   * @param {!Object|function(?Object)}
+   *     nextOrObserver An observer object or a function triggered on change.
+   * @param {function(!Object)=} opt_error Optional A function
+   *     triggered on auth error.
+   * @param {function()=} opt_completed Optional A function triggered when the
+   *     observer is removed.
+   * @return {function()} The unsubscribe function for the observer.
+   */
+  onAuthStateChanged(nextOrObserver, opt_error, opt_completed) {
+    // Simplified version of the observer for testing purpose only.
+    var observer = (goog.isFunction(nextOrObserver) && nextOrObserver) ||
+        nextOrObserver['next'];
+    if (!observer) {
+      throw 'onAuthStateChanged must be called with an Observer or up to three ' +
+          'functions: next, error and completed.';
+    }
+    this.authObservers_.push(observer);
+    var self = this;
+    // This will allow the subscriber to remove the observer.
+    var unsubscribe = function() {
+      // Removes the observer.
+      array.removeAllIf(self.authObservers_, function(obs) {
+        return obs == observer;
+      });
+    };
+    return unsubscribe;
   }
-  this.idTokenObservers_.push(observer);
-  var self = this;
-  // This will allow the subscriber to remove the observer.
-  var unsubscribe = function() {
-    // Removes the observer.
-    array.removeAllIf(self.idTokenObservers_, function(obs) {
-      return obs == observer;
-    });
-  };
-  return unsubscribe;
-};
+
+  /**
+   * Triggers all registered ID token change listeners.
+   */
+  runIdTokenChangeHandler() {
+    for (var i = 0; i < this.idTokenObservers_.length; i++) {
+      this.idTokenObservers_[i](this['currentUser']);
+    }
+  }
+
+  /**
+   * Adds an observer for ID token state changes.
+   * @param {!Object|function(?Object)}
+   *     nextOrObserver An observer object or a function triggered on change.
+   * @param {function(!Object)=} opt_error Optional A function
+   *     triggered on auth error.
+   * @param {function()=} opt_completed Optional A function triggered when the
+   *     observer is removed.
+   * @return {function()} The unsubscribe function for the observer.
+   */
+  onIdTokenChanged(nextOrObserver, opt_error, opt_completed) {
+    // Simplified version of the observer for testing purpose only.
+    var observer = (goog.isFunction(nextOrObserver) && nextOrObserver) ||
+        nextOrObserver['next'];
+    if (!observer) {
+      throw 'onIdTokenChanged must be called with an Observer or up to three ' +
+          'functions: next, error and completed.';
+    }
+    this.idTokenObservers_.push(observer);
+    var self = this;
+    // This will allow the subscriber to remove the observer.
+    var unsubscribe = function() {
+      // Removes the observer.
+      array.removeAllIf(self.idTokenObservers_, function(obs) {
+        return obs == observer;
+      });
+    };
+    return unsubscribe;
+  }
+}
 
 
 /**
@@ -189,24 +182,13 @@ FakeAuthClient.AuthAsyncMethod = {
   APPLY_ACTION_CODE: 'applyActionCode',
   CHECK_ACTION_CODE: 'checkActionCode',
   CONFIRM_PASSWORD_RESET: 'confirmPasswordReset',
-  CREATE_USER_AND_RETRIEVE_DATA_WITH_EMAIL_AND_PASSWORD:
-      'createUserAndRetrieveDataWithEmailAndPassword',
   CREATE_USER_WITH_EMAIL_AND_PASSWORD: 'createUserWithEmailAndPassword',
-  FETCH_PROVIDERS_FOR_EMAIL: 'fetchProvidersForEmail',
   FETCH_SIGN_IN_METHODS_FOR_EMAIL: 'fetchSignInMethodsForEmail',
   GET_REDIRECT_RESULT: 'getRedirectResult',
   IS_SIGN_IN_WITH_EMAIL_LINK: 'isSignInWithEmailLink',
   SEND_PASSWORD_RESET_EMAIL: 'sendPasswordResetEmail',
   SEND_SIGN_IN_LINK_TO_EMAIL: 'sendSignInLinkToEmail',
   SET_PERSISTENCE: 'setPersistence',
-  SIGN_IN_AND_RETRIEVE_DATA_WITH_CREDENTIAL:
-      'signInAndRetrieveDataWithCredential',
-  SIGN_IN_AND_RETRIEVE_DATA_WITH_CUSTOM_TOKEN:
-      'signInAndRetrieveDataWithCustomToken',
-  SIGN_IN_AND_RETRIEVE_DATA_WITH_EMAIL_AND_PASSWORD:
-      'signInAndRetrieveDataWithEmailAndPassword',
-  SIGN_IN_ANONYMOUSLY_AND_RETRIEVE_DATA:
-      'signInAnonymouslyAndRetrieveData',
   SIGN_IN_ANONYMOUSLY: 'signInAnonymously',
   SIGN_IN_WITH_CREDENTIAL: 'signInWithCredential',
   SIGN_IN_WITH_CUSTOM_TOKEN: 'signInWithCustomToken',
@@ -227,13 +209,10 @@ FakeAuthClient.AuthAsyncMethod = {
  */
 FakeAuthClient.UserAsyncMethod = {
   GET_ID_TOKEN: 'getIdToken',
-  LINK_AND_RETRIEVE_DATA_WITH_CREDENTIAL: 'linkAndRetrieveDataWithCredential',
   LINK_WITH_CREDENTIAL: 'linkWithCredential',
   LINK_WITH_PHONE_NUMBER: 'linkWithPhoneNumber',
   LINK_WITH_POPUP: 'linkWithPopup',
   LINK_WITH_REDIRECT: 'linkWithRedirect',
-  REAUTHENTICATE_AND_RETRIEVE_DATA_WITH_CREDENTIAL:
-      'reauthenticateAndRetrieveDataWithCredential',
   REAUTHENTICATE_WITH_CREDENTIAL: 'reauthenticateWithCredential',
   REAUTHENTICATE_WITH_PHONE_NUMBER: 'reauthenticateWithPhoneNumber',
   REAUTHENTICATE_WITH_POPUP: 'reauthenticateWithPopup',

@@ -110,11 +110,11 @@ firebaseui.auth.widget.handler.onPasswordLinkingSubmit_ =
           goog.bind(app.signInWithExistingEmailAndPasswordForLinking, app)),
       [email, password],
       function(userCredential) {
-        var p = userCredential['user'].linkAndRetrieveDataWithCredential(
+        var p = userCredential['user'].linkWithCredential(
             pendingCredential)
             .then(function(linkedUserCredential) {
               var linkedAuthResult =
-                /** @type {!firebaseui.auth.AuthResult} */ ({
+                /** @type {!firebaseui.auth.widget.Config.AuthResult} */ ({
                 'user': linkedUserCredential['user'],
                 'credential': pendingCredential,
                 'operationType': linkedUserCredential['operationType'],

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <title>FirebaseUI Auth Demo</title>
-    <script src="https://www.gstatic.com/firebasejs/5.5/firebase.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/7.4.0/firebase.js"></script>
     <script src="config.js"></script>
     <script src="common.js"></script>
     <script src="dist/firebaseui.js"></script>
@@ -53,6 +53,13 @@
             recaptchaParameters: {
               size: getRecaptchaMode()
             }
+          },
+          {
+            provider: 'microsoft.com',
+            loginHintKey: 'login_hint'
+          },
+          {
+            provider: 'apple.com',
           },
           firebaseui.auth.AnonymousAuthProvider.PROVIDER_ID
         ],

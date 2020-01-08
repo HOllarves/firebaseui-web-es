@@ -26,7 +26,6 @@ goog.require('firebaseui.auth.widget.handler');
 goog.require('firebaseui.auth.widget.handler.common');
 
 
-
 /**
  * Handles the case where the user had previously signed in with a federated IdP
  * but is now trying to sign in with email/password.
@@ -42,7 +41,7 @@ firebaseui.auth.widget.handler.handleFederatedSignIn = function(
     app, container, email, providerId, opt_infoBarMessage) {
   var component = new firebaseui.auth.ui.page.FederatedLinking(
       email,
-      providerId,
+      app.getConfig().getConfigForProvider(providerId),
       // On submit.
       function() {
         // Pass the email since some OAuth providers support OAuth flow

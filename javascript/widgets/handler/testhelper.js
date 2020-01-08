@@ -24,11 +24,9 @@ goog.setTestOnly('firebaseui.auth.widget.handler.testHelper');
 goog.require('firebaseui.auth.Account');
 goog.require('firebaseui.auth.ActionCodeUrlBuilder');
 goog.require('firebaseui.auth.AuthUI');
-goog.require('firebaseui.auth.CredentialHelper');
 goog.require('firebaseui.auth.EventDispatcher');
 goog.require('firebaseui.auth.OAuthResponse');
 goog.require('firebaseui.auth.PendingEmailCredential');
-goog.require('firebaseui.auth.callback.signInSuccess');
 goog.require('firebaseui.auth.idp');
 goog.require('firebaseui.auth.soy2.strings');
 goog.require('firebaseui.auth.storage');
@@ -48,6 +46,7 @@ goog.require('goog.dom.classlist');
 goog.require('goog.dom.forms');
 goog.require('goog.events');
 goog.require('goog.events.KeyCodes');
+goog.require('goog.object');
 goog.require('goog.testing.MockClock');
 goog.require('goog.testing.PropertyReplacer');
 goog.require('goog.testing.events');
@@ -141,7 +140,8 @@ var signInOptionsWithScopes = [
     'scopes': ['googl1', 'googl2'],
     'customParameters': {'prompt': 'select_account'}
   },
-  {'provider': 'facebook.com', 'scopes': ['fb1', 'fb2']}, 'password'
+  {'provider': 'facebook.com', 'scopes': ['fb1', 'fb2']},
+  'password'
 ];
 
 var emailLinkSignInOptions = [
@@ -155,7 +155,8 @@ var emailLinkSignInOptions = [
       };
     }
   },
-  'google.com'
+  'google.com',
+  'facebook.com'
 ];
 
 var testStubs = new goog.testing.PropertyReplacer();
@@ -207,10 +208,8 @@ function setUp() {
   // Record accountchooser.com callback calls.
   accountChooserInvokedCallback = goog.testing.recordFunction();
   accountChooserResultCallback = goog.testing.recordFunction();
-  // Just pass the credential object through for the test.
-  testStubs.replace(firebaseui.auth.idp, 'getAuthCredential', function(obj) {
-    return obj;
-  });
+  testStubs.replace(firebaseui.auth.idp, 'getAuthCredential',
+                    createMockCredential);
   // Build mock auth providers.
   firebase['auth'] = {};
   // Mock reCAPTCHA verifier.
@@ -245,10 +244,34 @@ function setUp() {
       };
     }
   }
-  // Initialize after getAuthCredential stub.
-  authCredential = firebaseui.auth.idp.getAuthCredential(
+  firebase['auth']['SAMLAuthProvider'] = function(providerId) {
+    this.providerId = providerId;
+    this.customParameters = {};
+  };
+  firebase['auth']['SAMLAuthProvider'].prototype.setCustomParameters =
+      function(customParameters) {
+    this.customParameters = customParameters;
+    return this;
+  };
+  firebase['auth']['OAuthProvider'] = function(providerId) {
+    this.providerId = providerId;
+    this.scopes = [];
+    this.customParameters = {};
+  };
+  firebase['auth']['OAuthProvider'].prototype.setCustomParameters =
+      function(customParameters) {
+    this.customParameters = customParameters;
+    return this;
+  };
+  firebase['auth']['OAuthProvider'].prototype.addScope =
+      function(scope) {
+    this.scopes.push(scope);
+    return this;
+  };
+  // Initialize mock credentials.
+  authCredential = createMockCredential(
       {'accessToken': 'facebookAccessToken', 'providerId': 'facebook.com'});
-  federatedCredential = firebaseui.auth.idp.getAuthCredential(
+  federatedCredential = createMockCredential(
       {'accessToken': 'googleAccessToken', 'providerId': 'google.com'});
   // Simulate email auth provider credential.
   firebase['auth']['EmailAuthProvider'] =
@@ -272,11 +295,16 @@ function setUp() {
       firebase['auth']['GoogleAuthProvider'] || {};
   firebase['auth']['GoogleAuthProvider']['credential'] = function(
       idToken, accessToken) {
-    return {
+    return createMockCredential({
       'idToken': idToken,
       'accessToken': accessToken,
       'providerId': 'google.com'
-    };
+    });
+  };
+  firebase['auth']['AuthCredential'] = {
+    'fromJSON': function(json) {
+      return createMockCredential(json);
+    }
   };
   getApp = function() {
     return app;
@@ -331,12 +359,25 @@ function setUp() {
   app.setConfig({
     'signInSuccessUrl': 'http://localhost/home',
     'widgetUrl': 'http://localhost/firebaseui-widget',
-    'signInOptions': ['google.com', 'facebook.com', 'password'],
+    'signInOptions': ['google.com', 'facebook.com', 'password', 'github.com',
+                      {
+                        'provider': 'microsoft.com',
+                        'loginHintKey': 'login_hint',
+                        'buttonColor': '#2F2F2F',
+                        'iconUrl': '<icon-url>'
+                      },
+                      {
+                        'provider': 'saml.provider',
+                        'providerName': 'SAML Provider',
+                        'buttonColor': '#2F2F2F',
+                        'iconUrl': '<icon-url>'
+                      }],
     'siteName': 'Test Site',
     'popupMode': false,
     'tosUrl': tosCallback,
     'privacyPolicyUrl': 'http://localhost/privacy_policy',
-    'credentialHelper': firebaseui.auth.CredentialHelper.ACCOUNT_CHOOSER_COM,
+    'credentialHelper':
+        firebaseui.auth.widget.Config.CredentialHelper.ACCOUNT_CHOOSER_COM,
     'callbacks': {
       'signInFailure': signInFailureCallback
     },
@@ -445,6 +486,22 @@ function simulateCordovaEnvironment() {
 
 
 /**
+ * Returns a mock credential object with toJSON method.
+ * @param {!Object} credentialObject The plain credential object.
+ * @return {!Object} The fake Auth credential.
+ */
+function createMockCredential(credentialObject) {
+  var copy = goog.object.clone(credentialObject);
+   goog.object.extend(credentialObject, {
+     'toJSON': function() {
+       return copy;
+     }
+   });
+   return credentialObject;
+}
+
+
+/**
  * Build action code settings.
  * @param {boolean=} opt_forceSameDevice Whether to force same device.
  * @param {?string=} opt_providerId The provider ID for linking flow.
@@ -483,10 +540,11 @@ function buildActionCodeSettings(
  * @param {?string=} opt_uid The optional anonymous user ID to be upgraded.
  * @param {?string=} opt_providerId The optional provider ID to link.
  * @param {boolean=} opt_forceSameDevice Whether to force same device flow.
+ * @param {?string=} opt_tenantId The optional tenantId.
  * @return {string} The generated email action link.
  */
 function generateSignInLink(
-    sessionId, opt_uid, opt_providerId, opt_forceSameDevice) {
+    sessionId, opt_uid, opt_providerId, opt_forceSameDevice, opt_tenantId) {
   var url = 'https://www.example.com/signIn?mode=' +
       'signIn&apiKey=API_KEY&oobCode=ACTION_CODE';
   var builder = new firebaseui.auth.ActionCodeUrlBuilder(url);
@@ -496,6 +554,9 @@ function generateSignInLink(
   }
   if (opt_providerId) {
     builder.setProviderId(opt_providerId);
+  }
+  if (opt_tenantId) {
+    builder.setTenantId(opt_tenantId);
   }
   builder.setForceSameDevice(!!opt_forceSameDevice);
   return builder.toString();
@@ -1034,6 +1095,18 @@ function assertPasswordSignUpPage() {
 }
 
 
+/**
+ * Asserts that unsupported provider page is displayed.
+ * @param {string=} opt_email Optional email to check.
+ */
+function assertUnsupportedProviderPage(opt_email) {
+  assertPage_(container, 'firebaseui-id-page-unsupported-provider');
+  if (opt_email) {
+    assertPageContainsText(opt_email);
+  }
+}
+
+
 function assertPasswordRecoveryPage() {
   assertPage_(container, 'firebaseui-id-page-password-recovery');
 }
@@ -1269,8 +1342,8 @@ function assertPage_(container, idClass) {
  * @param {boolean} redirect The return status of the success callback.
  * @param {boolean=} opt_manualRedirect Whether the developer manually
  *     redirects to redirectUrl.
- * @return {!firebaseui.auth.callback.signInSuccess} sign in success callback
- *     function.
+ * @return {!firebaseui.auth.widget.Config.signInSuccessCallback} sign in
+ *     success callback function.
  */
 function signInSuccessCallback(redirect, opt_manualRedirect) {
   return function(user, credential, redirectUrl) {
@@ -1304,8 +1377,8 @@ function assertSignInSuccessCallbackInvoked(
  * @param {boolean} redirect The return status of the success callback.
  * @param {boolean=} opt_manualRedirect Whether the developer manually
  *     redirects to redirectUrl.
- * @return {!firebaseui.auth.callback.signInSuccessWithAuthResult} sign in
- *     success with auth result callback function.
+ * @return {!firebaseui.auth.widget.Config.signInSuccessWithAuthResultCallback}
+ *     sign in success with auth result callback function.
  */
 function signInSuccessWithAuthResultCallback(redirect, opt_manualRedirect) {
   return function(authResult, redirectUrl) {
@@ -1427,8 +1500,11 @@ function assertResendCountdown(timeRemaining) {
 function assertSignInFailure(expectedError) {
   // Confirm signInFailure callback triggered with expected argument.
   assertEquals(1, signInFailureCallback.getCallCount());
+  // Plain assertObjectEquals cannot be used as Internet Explorer adds the
+  // stack trace as a property of the object.
   assertObjectEquals(
-      expectedError, signInFailureCallback.getLastCall().getArgument(0));
+      expectedError.toPlainObject(),
+      signInFailureCallback.getLastCall().getArgument(0).toPlainObject());
   // Sign in success should not be called.
   assertUndefined(signInCallbackUser);
 }

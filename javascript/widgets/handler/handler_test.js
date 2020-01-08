@@ -34,6 +34,8 @@ goog.require('firebaseui.auth.widget.handler.handleEmailMismatch');
 goog.require('firebaseui.auth.widget.handler.handleEmailNotReceived');
 goog.require('firebaseui.auth.widget.handler.handleEmailVerification');
 goog.require('firebaseui.auth.widget.handler.handleFederatedLinking');
+goog.require('firebaseui.auth.widget.handler.handleFederatedRedirect');
+goog.require('firebaseui.auth.widget.handler.handleFederatedSignIn');
 goog.require('firebaseui.auth.widget.handler.handlePasswordLinking');
 goog.require('firebaseui.auth.widget.handler.handlePasswordRecovery');
 goog.require('firebaseui.auth.widget.handler.handlePasswordReset');
@@ -44,6 +46,7 @@ goog.require('firebaseui.auth.widget.handler.handlePhoneSignInStart');
 goog.require('firebaseui.auth.widget.handler.handleProviderSignIn');
 goog.require('firebaseui.auth.widget.handler.handleSendEmailLinkForSignIn');
 goog.require('firebaseui.auth.widget.handler.handleSignIn');
+goog.require('firebaseui.auth.widget.handler.handleUnsupportedProvider');
 goog.require('firebaseui.auth.widget.handler.testHelper');
 
 
@@ -55,6 +58,9 @@ function testHandlerRegistration() {
   assertEquals(
       firebaseui.auth.widget.handler.handleFederatedLinking,
       firebaseui.auth.widget.handlers_[HandlerName.FEDERATED_LINKING]);
+  assertEquals(
+      firebaseui.auth.widget.handler.handleFederatedRedirect,
+      firebaseui.auth.widget.handlers_[HandlerName.FEDERATED_REDIRECT]);
   assertEquals(
       firebaseui.auth.widget.handler.handleFederatedSignIn,
       firebaseui.auth.widget.handlers_[HandlerName.FEDERATED_SIGN_IN]);
@@ -121,7 +127,13 @@ function testHandlerRegistration() {
       firebaseui.auth.widget.handler.handleProviderSignIn,
       firebaseui.auth.widget.handlers_[HandlerName.PROVIDER_SIGN_IN]);
   assertEquals(
+      firebaseui.auth.widget.handler.handlePrefilledEmailSignIn,
+      firebaseui.auth.widget.handlers_[HandlerName.PREFILLED_EMAIL_SIGN_IN]);
+  assertEquals(
       firebaseui.auth.widget.handler.handleEmailLinkSignInCallback,
       firebaseui.auth.widget.handlers_[
           HandlerName.EMAIL_LINK_SIGN_IN_CALLBACK]);
+  assertEquals(
+      firebaseui.auth.widget.handler.handleUnsupportedProvider,
+      firebaseui.auth.widget.handlers_[HandlerName.UNSUPPORTED_PROVIDER]);
 }
